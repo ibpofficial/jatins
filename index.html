@@ -113,7 +113,8 @@
         /* Heart Canvas Styles */
         #heart-canvas {
             max-width: 90vw;
-            max-height: 70vh;
+            max-height: 60vh;
+            filter: drop-shadow(0 0 30px rgba(224, 169, 165, 0.4));
         }
 
         /* Scratch Card Styles */
@@ -218,10 +219,16 @@
     <!-- 2.5 HEART SEQUENCE -->
     <div id="screen-heart" class="screen hidden-screen flex-col gap-6">
         <div class="text-center z-10">
-            <h2 class="playfair metallic-rose text-4xl tracking-[0.2em] mb-2">Pure Devotion</h2>
-            <p class="text-gray-500 text-[10px] uppercase tracking-[0.5em]">Crafting a memory just for you...</p>
+            <h2 class="playfair metallic-rose text-4xl tracking-[0.2em] mb-2">Soul Signature</h2>
+            <p class="text-gray-500 text-[10px] uppercase tracking-[0.5em]">Defining the shape of our love...</p>
         </div>
-        <canvas id="heart-canvas"></canvas>
+        <div class="relative flex flex-col items-center">
+            <canvas id="heart-canvas"></canvas>
+            <!-- BIG BOLD NAME BELOW HEART -->
+            <div id="heart-name-container" class="opacity-0 translate-y-8 transition-all duration-1000 mt-[-40px] z-20">
+                <h1 class="playfair metallic-text text-7xl md:text-9xl font-bold tracking-[0.2em] drop-shadow-2xl">TEENA</h1>
+            </div>
+        </div>
     </div>
 
     <!-- 3. SCRATCH CARD -->
@@ -356,53 +363,132 @@
             renderer.render(scene, camera);
         }
 
-        // --- HEART DRAWING SEQUENCE ---
+        // --- MODERN HEART SEQUENCE ---
         function initHeartDrawing() {
             const canvas = document.getElementById('heart-canvas');
             const ctx = canvas.getContext('2d');
-            canvas.width = 600;
-            canvas.height = 600;
+            canvas.width = 800;
+            canvas.height = 800;
 
             const points = [];
-            const totalPoints = 150;
+            const totalSteps = 240; 
             const centerX = canvas.width / 2;
             const centerY = canvas.height / 2.2;
-            const scale = 15;
+            const scale = 18;
 
-            for (let i = 0; i < totalPoints; i++) {
-                const t = (i / totalPoints) * Math.PI * 2;
+            // Pre-calculate heart points
+            for (let i = 0; i <= totalSteps; i++) {
+                const t = (i / totalSteps) * Math.PI * 2;
                 const x = 16 * Math.pow(Math.sin(t), 3);
                 const y = -(13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t));
                 points.push({ x: centerX + x * scale, y: centerY + y * scale });
             }
 
-            let currentPoint = 0;
+            // Load PNG image
+            const heartImage = new Image();
+            // Replace 'your-photo.png' with your actual local file name
+            heartImage.src = 'your-photo.png'; 
+            let imageOpacity = 0;
+            let imageLoaded = false;
+            heartImage.onload = () => imageLoaded = true;
+            heartImage.onerror = () => {
+                // Fallback if image doesn't exist
+                console.warn("Heart image not found, using gradient fill.");
+                imageLoaded = false;
+            };
+
+            let currentStep = 0;
+            let nameTriggered = false;
+
             function draw() {
-                if (currentPoint < points.length) {
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    ctx.shadowBlur = 15;
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // 1. Draw the "Python-like" gradual pen line
+                if (currentStep <= totalSteps) {
+                    ctx.save();
+                    ctx.shadowBlur = 20;
                     ctx.shadowColor = "#e0a9a5";
                     ctx.beginPath();
                     ctx.strokeStyle = "#e0a9a5";
-                    ctx.lineWidth = 3;
+                    ctx.lineWidth = 5;
+                    ctx.lineCap = "round";
                     ctx.moveTo(points[0].x, points[0].y);
-                    for (let i = 1; i <= currentPoint; i++) {
+                    for (let i = 1; i <= currentStep; i++) {
                         ctx.lineTo(points[i].x, points[i].y);
                     }
                     ctx.stroke();
-                    currentPoint++;
+                    ctx.restore();
+                    
+                    // Draw a "pen tip" spark at the leading point
+                    const lead = points[Math.min(currentStep, totalSteps)];
+                    ctx.fillStyle = "#fff";
+                    ctx.beginPath();
+                    ctx.arc(lead.x, lead.y, 4, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    currentStep += 2; // Adjust speed here
                     requestAnimationFrame(draw);
-                } else {
-                    gsap.to(canvas, {
-                        scale: 1.1,
-                        duration: 0.8,
-                        repeat: 3,
-                        yoyo: true,
-                        ease: "power2.inOut",
-                        onComplete: () => {
-                            explodeHeart(points, canvas);
-                        }
-                    });
+                } 
+                // 2. Path Complete: Fade in image, pulse and show NAME
+                else {
+                    if (!nameTriggered) {
+                        nameTriggered = true;
+                        // Reveal TEENA name with GSAP
+                        gsap.to('#heart-name-container', { 
+                            opacity: 1, 
+                            y: 0, 
+                            duration: 1.5, 
+                            ease: "power2.out" 
+                        });
+                    }
+
+                    // Create Clip Mask
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.moveTo(points[0].x, points[0].y);
+                    for (let i = 1; i < points.length; i++) {
+                        ctx.lineTo(points[i].x, points[i].y);
+                    }
+                    ctx.clip();
+
+                    if (imageLoaded) {
+                        ctx.globalAlpha = imageOpacity;
+                        const imgSize = 600;
+                        ctx.drawImage(heartImage, centerX - imgSize/2, centerY - imgSize/2, imgSize, imgSize);
+                    } else {
+                        const grad = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, 300);
+                        grad.addColorStop(0, '#e0a9a5');
+                        grad.addColorStop(1, '#c28e8a');
+                        ctx.fillStyle = grad;
+                        ctx.globalAlpha = imageOpacity;
+                        ctx.fill();
+                    }
+                    ctx.restore();
+
+                    ctx.shadowBlur = 25;
+                    ctx.shadowColor = "#e0a9a5";
+                    ctx.strokeStyle = `rgba(224, 169, 165, ${Math.min(imageOpacity + 0.2, 1)})`;
+                    ctx.lineWidth = 4;
+                    ctx.stroke();
+
+                    if (imageOpacity < 1) {
+                        imageOpacity += 0.02;
+                        requestAnimationFrame(draw);
+                    } else {
+                        // 3. Complete: Pulse then Burst
+                        gsap.to(canvas, {
+                            scale: 1.08,
+                            duration: 0.6,
+                            repeat: 3,
+                            yoyo: true,
+                            ease: "power2.inOut",
+                            onComplete: () => {
+                                // Fade name out before burst
+                                gsap.to('#heart-name-container', { opacity: 0, duration: 0.3 });
+                                explodeHeart(points, canvas);
+                            }
+                        });
+                    }
                 }
             }
             draw();
@@ -411,17 +497,19 @@
         function explodeHeart(points, canvas) {
             const ctx = canvas.getContext('2d');
             const particles = [];
-
-            points.forEach(p => {
+            
+            for(let i=0; i<400; i++) {
+                const randPoint = points[Math.floor(Math.random() * points.length)];
                 particles.push({
-                    x: p.x,
-                    y: p.y,
-                    vx: (Math.random() - 0.5) * 15,
-                    vy: (Math.random() - 0.5) * 15,
+                    x: randPoint.x,
+                    y: randPoint.y,
+                    vx: (Math.random() - 0.5) * 25,
+                    vy: (Math.random() - 0.5) * 25,
                     alpha: 1,
-                    size: Math.random() * 4 + 2
+                    size: Math.random() * 5 + 2,
+                    color: i % 2 === 0 ? "#e0a9a5" : "#d4af37"
                 });
-            });
+            }
 
             function burst() {
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -429,16 +517,19 @@
                 particles.forEach(p => {
                     p.x += p.vx;
                     p.y += p.vy;
-                    p.alpha -= 0.02;
+                    p.alpha -= 0.015;
                     if (p.alpha > 0) {
                         alive = true;
                         ctx.globalAlpha = p.alpha;
-                        ctx.fillStyle = "#d4af37";
+                        ctx.fillStyle = p.color;
+                        ctx.shadowBlur = 10;
+                        ctx.shadowColor = p.color;
                         ctx.beginPath();
                         ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
                         ctx.fill();
                     }
                 });
+                
                 if (alive) {
                     requestAnimationFrame(burst);
                 } else {
@@ -579,7 +670,6 @@
             transition('screen-scratch', 'screen-video');
             triggerCelebration();
             
-            // Wait for metadata to avoid AbortError interruption
             video.onloadedmetadata = () => safePlay(video);
         }
 
