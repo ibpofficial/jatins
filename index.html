@@ -183,18 +183,18 @@
     <div class="stars-overlay"></div>
 
     <video class="video-bg" autoplay muted loop playsinline id="bgVideo">
-        <source src="https://assets.mixkit.co/videos/preview/mixkit-fireworks-illuminating-the-night-sky-4252-large.mp4" type="video/mp4">
+        <source src="dd.mp4" type="video/mp4">
     </video>
 
     <audio id="bgMusic" loop>
-        <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-15.mp3" type="audio/mpeg">
+        <source src="Tum Hi Ho Song Aashiqui 2  Music By Mithoon  Aditya Roy Kapur, Shraddha Kapoor - T-Series.mp3" type="audio/mpeg">
     </audio>
 
     <!-- 1. START -->
     <div id="screen-start" class="screen px-6">
         <div class="glass p-12 md:p-20 text-center max-w-2xl border-white/5 relative overflow-hidden">
             <div class="absolute -top-10 -right-10 w-40 h-40 bg-rose-gold/10 rounded-full blur-3xl"></div>
-            <h2 class="text-rose-gold text-xs uppercase tracking-[0.5em] mb-6 opacity-60">Est. 2026</h2>
+            <h2 class="text-rose-gold text-xs uppercase tracking-[0.5em] mb-6 opacity-60">Welcome. 2026</h2>
             <h1 class="playfair metallic-text text-5xl md:text-7xl mb-8 leading-tight">Infinite Magic<br>Awaits You</h1>
             <p class="text-gray-400 font-light italic mb-10 tracking-widest">A journey designed only for your eyes.</p>
             <button onclick="startJourney()" class="btn-luxe px-12 py-5 rounded-full font-semibold uppercase tracking-[0.2em] text-sm">
@@ -234,21 +234,32 @@
                 <canvas id="scratch-canvas"></canvas>
             </div>
             
-            <button id="btn-final" onclick="showVideo()" class="btn-luxe px-10 py-4 rounded-full font-semibold mt-12 opacity-0 pointer-events-none uppercase text-xs tracking-widest">
-                Watch the Memory
-            </button>
+            <!-- Button Container -->
+            <div id="action-buttons" class="flex flex-col gap-4 items-center mt-12 opacity-0 pointer-events-none transition-all duration-700">
+                <button onclick="showVideo('w.mp4')" class="btn-luxe px-10 py-4 rounded-full font-semibold uppercase text-xs tracking-widest w-64">
+                    Watch the Memory
+                </button>
+                <button onclick="showVideo('meme.mp4')" class="btn-luxe px-10 py-4 rounded-full font-semibold uppercase text-xs tracking-widest w-64 border border-rose-gold/30 bg-transparent">
+                    The Recap
+                </button>
+            </div>
         </div>
     </div>
 
     <!-- 4. VIDEO -->
     <div id="screen-video" class="screen hidden-screen px-4 bg-black/98 flex-col gap-8">
+        <div class="absolute top-6 left-6 z-30">
+            <button onclick="backToChoice()" class="text-rose-gold/50 hover:text-rose-gold text-xs uppercase tracking-widest flex items-center gap-2">
+                <span>←</span> Back
+            </button>
+        </div>
         <div class="text-center z-20">
             <h2 class="playfair metallic-text text-3xl md:text-6xl tracking-widest mb-2">Our Time, Always.</h2>
             <p class="text-rose-gold/60 text-[10px] uppercase tracking-[0.6em]">Cheers to a Beautiful 2026</p>
         </div>
         <div id="final-video-container" class="glass overflow-hidden border border-white/10 relative">
             <video id="finalVideo" controls class="w-full h-full object-cover">
-                <source src="https://assets.mixkit.co/videos/preview/mixkit-celebration-sparklers-in-the-dark-4424-large.mp4" type="video/mp4">
+                <source src="" type="video/mp4">
             </video>
         </div>
     </div>
@@ -322,7 +333,7 @@
 
             const grad = ctx.createLinearGradient(0, 0, 300, 300);
             grad.addColorStop(0, '#c28e8a');
-            grad.addColorStop(0.5, '#f9f295'); // Added a gold shimmer to the scratch cover
+            grad.addColorStop(0.5, '#f9f295'); 
             grad.addColorStop(1, '#c28e8a');
             ctx.fillStyle = grad;
             ctx.fillRect(0, 0, 300, 300);
@@ -345,7 +356,7 @@
 
                 if(!buttonShown) {
                     buttonShown = true;
-                    gsap.to('#btn-final', { opacity: 1, pointerEvents: 'auto', y: -10, duration: 0.5 });
+                    gsap.to('#action-buttons', { opacity: 1, pointerEvents: 'auto', y: -10, duration: 0.6 });
                 }
             }
 
@@ -445,12 +456,30 @@
             }, 800);
         }
 
-        function showVideo() {
+        function showVideo(videoSrc) {
             const music = document.getElementById('bgMusic');
+            const video = document.getElementById('finalVideo');
+            
             gsap.to(music, { volume: 0, duration: 1.5, onComplete: () => music.pause() });
+            
+            // Set source and load
+            video.src = videoSrc;
+            video.load();
+            
             transition('screen-scratch', 'screen-video');
             triggerCelebration();
-            document.getElementById('finalVideo').play();
+            video.play();
+        }
+
+        function backToChoice() {
+            const video = document.getElementById('finalVideo');
+            const music = document.getElementById('bgMusic');
+            
+            video.pause();
+            music.play();
+            gsap.to(music, { volume: 0.4, duration: 1 });
+            
+            transition('screen-video', 'screen-scratch');
         }
 
         window.onload = () => { init3D(); animate(); };
