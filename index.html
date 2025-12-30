@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2026 | A Golden Beginning</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400&family=Montserrat:wght@200;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --gold: #d4af37;
+            --rose-gold: #e0a9a5;
+            --midnight: #05070a;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: var(--midnight);
+            font-family: 'Montserrat', sans-serif;
+            color: white;
+            user-select: none;
+            touch-action: none;
+        }
+        .playfair { font-family: 'Playfair Display', serif; }
+
+        /* Metallic Text Effect */
+        .metallic-text {
+            background: linear-gradient(to bottom, #f9f295 0%, #e0aa3e 25%, #e0aa3e 50%, #b8860b 75%, #f9f295 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+            position: relative;
+        }
+        
+        .metallic-rose {
+            background: linear-gradient(to bottom, #ffffff 0%, #e0a9a5 40%, #c28e8a 60%, #e0a9a5 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        #bg-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: -1;
+        }
+
+        .video-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0.15;
+            z-index: -2;
+            filter: blur(4px);
+        }
+
+        .glass {
+            background: rgba(255, 255, 255, 0.02);
+            backdrop-filter: blur(25px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 40px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .btn-luxe {
+            background: linear-gradient(135deg, #e0a9a5 0%, #c28e8a 100%);
+            color: #2b1b1a;
+            box-shadow: 0 0 20px rgba(224, 169, 165, 0.2);
+            transition: all 0.5s cubic-bezier(0.2, 1, 0.3, 1);
+        }
+
+        .btn-luxe:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 30px rgba(224, 169, 165, 0.4);
+            letter-spacing: 2px;
+        }
+
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.8s ease, transform 0.8s ease;
+        }
+
+        .hidden-screen {
+            opacity: 0;
+            pointer-events: none;
+            display: none !important;
+        }
+
+        #interaction-zone {
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .floating-charm {
+            position: absolute;
+            cursor: pointer;
+            filter: drop-shadow(0 0 15px var(--rose-gold));
+            padding: 20px;
+        }
+
+        /* Scratch Card Styles */
+        #scratch-container {
+            position: relative;
+            width: 300px;
+            height: 300px;
+            margin: 0 auto;
+        }
+        #scratch-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 2;
+            cursor: crosshair;
+            border-radius: 20px;
+            touch-action: none;
+        }
+        .scratch-reveal {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1;
+            background: rgba(255,255,255,0.05);
+            border-radius: 20px;
+        }
+
+        #scratch-hint {
+            pointer-events: none;
+            z-index: 3;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 0.8; }
+        }
+
+        /* Video scaling for the requested 70% width */
+        #final-video-container {
+            width: 70vw;
+            max-width: 1200px;
+            aspect-ratio: 16/9;
+            box-shadow: 0 0 80px rgba(224, 169, 165, 0.2);
+        }
+
+        .celebration-particle {
+            position: absolute;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        /* Visual enhancement: soft stars overlay */
+        .stars-overlay {
+            position: fixed;
+            inset: 0;
+            background-image: radial-gradient(circle, #fff 1px, transparent 1px);
+            background-size: 50px 50px;
+            opacity: 0.05;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="bg-canvas"></canvas>
+    <div class="stars-overlay"></div>
+
+    <video class="video-bg" autoplay muted loop playsinline id="bgVideo">
+        <source src="https://assets.mixkit.co/videos/preview/mixkit-fireworks-illuminating-the-night-sky-4252-large.mp4" type="video/mp4">
+    </video>
+
+    <audio id="bgMusic" loop>
+        <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-15.mp3" type="audio/mpeg">
+    </audio>
+
+    <!-- 1. START -->
+    <div id="screen-start" class="screen px-6">
+        <div class="glass p-12 md:p-20 text-center max-w-2xl border-white/5 relative overflow-hidden">
+            <div class="absolute -top-10 -right-10 w-40 h-40 bg-rose-gold/10 rounded-full blur-3xl"></div>
+            <h2 class="text-rose-gold text-xs uppercase tracking-[0.5em] mb-6 opacity-60">Est. 2026</h2>
+            <h1 class="playfair metallic-text text-5xl md:text-7xl mb-8 leading-tight">Infinite Magic<br>Awaits You</h1>
+            <p class="text-gray-400 font-light italic mb-10 tracking-widest">A journey designed only for your eyes.</p>
+            <button onclick="startJourney()" class="btn-luxe px-12 py-5 rounded-full font-semibold uppercase tracking-[0.2em] text-sm">
+                Enter The Glow
+            </button>
+        </div>
+    </div>
+
+    <!-- 2. CHARMS -->
+    <div id="screen-challenge" class="screen hidden-screen px-6">
+        <div class="absolute top-12 text-center w-full z-10">
+            <h3 class="playfair metallic-rose text-3xl tracking-widest">Collect the Sparks</h3>
+            <p class="text-gray-500 text-xs mt-2 uppercase tracking-[0.3em]">Catch 5 charms to proceed</p>
+        </div>
+        <div id="interaction-zone"></div>
+    </div>
+
+    <!-- 3. SCRATCH CARD (SURPRISE) -->
+    <div id="screen-scratch" class="screen hidden-screen px-6">
+        <div class="text-center w-full max-w-md">
+            <h2 class="playfair metallic-text text-4xl mb-8">Erase the Old</h2>
+            <p class="text-gray-400 text-sm mb-12 uppercase tracking-widest">Scratch to reveal 2026</p>
+            
+            <div id="scratch-container" class="glass p-2">
+                <div id="scratch-hint" class="absolute inset-0 flex items-center justify-center transition-opacity duration-500">
+                    <div class="text-white/60 text-[10px] uppercase tracking-[0.4em] flex flex-col items-center gap-2">
+                        <span class="text-xl">✨</span>
+                        Scratch here
+                    </div>
+                </div>
+                <div class="scratch-reveal">
+                    <div class="text-center">
+                        <span class="metallic-rose text-6xl playfair">2026</span>
+                        <p class="text-[10px] mt-4 text-white/40 tracking-[0.5em]">REVEALED</p>
+                    </div>
+                </div>
+                <canvas id="scratch-canvas"></canvas>
+            </div>
+            
+            <button id="btn-final" onclick="showVideo()" class="btn-luxe px-10 py-4 rounded-full font-semibold mt-12 opacity-0 pointer-events-none uppercase text-xs tracking-widest">
+                Watch the Memory
+            </button>
+        </div>
+    </div>
+
+    <!-- 4. VIDEO -->
+    <div id="screen-video" class="screen hidden-screen px-4 bg-black/98 flex-col gap-8">
+        <div class="text-center z-20">
+            <h2 class="playfair metallic-text text-3xl md:text-6xl tracking-widest mb-2">Our Time, Always.</h2>
+            <p class="text-rose-gold/60 text-[10px] uppercase tracking-[0.6em]">Cheers to a Beautiful 2026</p>
+        </div>
+        <div id="final-video-container" class="glass overflow-hidden border border-white/10 relative">
+            <video id="finalVideo" controls class="w-full h-full object-cover">
+                <source src="https://assets.mixkit.co/videos/preview/mixkit-celebration-sparklers-in-the-dark-4424-large.mp4" type="video/mp4">
+            </video>
+        </div>
+    </div>
+
+    <script>
+        let scene, camera, renderer, crystal, bokeh;
+        let progress = 0;
+        const totalWishes = 5;
+
+        // --- 3D SCENE ---
+        function init3D() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('bg-canvas'), alpha: true, antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+
+            // Floating Central "Crystal"
+            const geometry = new THREE.IcosahedronGeometry(1.6, 0);
+            const material = new THREE.MeshPhongMaterial({
+                color: 0xe0a9a5,
+                wireframe: true,
+                transparent: true,
+                opacity: 0.25
+            });
+            crystal = new THREE.Mesh(geometry, material);
+            scene.add(crystal);
+
+            // Floating Fine Particles
+            const pGeometry = new THREE.BufferGeometry();
+            const pCount = 1800;
+            const pPos = new Float32Array(pCount * 3);
+            for(let i=0; i<pCount*3; i++) pPos[i] = (Math.random()-0.5)*15;
+            pGeometry.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+            const pMat = new THREE.PointsMaterial({ color: 0xd4af37, size: 0.012, transparent: true, opacity: 0.3 });
+            const points = new THREE.Points(pGeometry, pMat);
+            scene.add(points);
+
+            // Bokeh Layer
+            const bGeometry = new THREE.BufferGeometry();
+            const bCount = 100;
+            const bPos = new Float32Array(bCount * 3);
+            for(let i=0; i<bCount*3; i++) bPos[i] = (Math.random()-0.5)*20;
+            bGeometry.setAttribute('position', new THREE.BufferAttribute(bPos, 3));
+            const bMat = new THREE.PointsMaterial({ color: 0xe0a9a5, size: 0.08, transparent: true, opacity: 0.15 });
+            bokeh = new THREE.Points(bGeometry, bMat);
+            scene.add(bokeh);
+
+            const light = new THREE.PointLight(0xffffff, 1.2, 100);
+            light.position.set(5, 5, 5);
+            scene.add(light);
+            scene.add(new THREE.AmbientLight(0x404040));
+
+            camera.position.z = 5;
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            crystal.rotation.x += 0.003;
+            crystal.rotation.y += 0.004;
+            bokeh.rotation.y -= 0.002;
+            renderer.render(scene, camera);
+        }
+
+        // --- SCRATCH CARD ---
+        function initScratch() {
+            const canvas = document.getElementById('scratch-canvas');
+            const ctx = canvas.getContext('2d');
+            const hint = document.getElementById('scratch-hint');
+            canvas.width = 300;
+            canvas.height = 300;
+
+            const grad = ctx.createLinearGradient(0, 0, 300, 300);
+            grad.addColorStop(0, '#c28e8a');
+            grad.addColorStop(0.5, '#f9f295'); // Added a gold shimmer to the scratch cover
+            grad.addColorStop(1, '#c28e8a');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, 300, 300);
+
+            let isDrawing = false;
+            let buttonShown = false;
+
+            function scratch(e) {
+                if(!isDrawing) return;
+                if(hint) hint.style.opacity = '0';
+
+                const rect = canvas.getBoundingClientRect();
+                const x = (e.clientX || (e.touches && e.touches[0].clientX)) - rect.left;
+                const y = (e.clientY || (e.touches && e.touches[0].clientY)) - rect.top;
+
+                ctx.globalCompositeOperation = 'destination-out';
+                ctx.beginPath();
+                ctx.arc(x, y, 38, 0, Math.PI * 2);
+                ctx.fill();
+
+                if(!buttonShown) {
+                    buttonShown = true;
+                    gsap.to('#btn-final', { opacity: 1, pointerEvents: 'auto', y: -10, duration: 0.5 });
+                }
+            }
+
+            canvas.addEventListener('mousedown', () => isDrawing = true);
+            canvas.addEventListener('mouseup', () => isDrawing = false);
+            canvas.addEventListener('mousemove', scratch);
+            canvas.addEventListener('touchstart', (e) => { isDrawing = true; scratch(e); });
+            canvas.addEventListener('touchend', () => isDrawing = false);
+            canvas.addEventListener('touchmove', (e) => { e.preventDefault(); scratch(e); }, { passive: false });
+        }
+
+        // --- CELEBRATION EFFECT ---
+        function triggerCelebration() {
+            for (let i = 0; i < 150; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'celebration-particle';
+                const size = Math.random() * 8 + 4;
+                particle.style.width = size + 'px';
+                particle.style.height = size + 'px';
+                particle.style.background = i % 2 === 0 ? '#d4af37' : '#e0a9a5';
+                particle.style.borderRadius = i % 3 === 0 ? '50%' : '2px';
+                particle.style.left = '50%';
+                particle.style.top = '50%';
+                document.body.appendChild(particle);
+
+                const destinationX = (Math.random() - 0.5) * window.innerWidth * 1.5;
+                const destinationY = (Math.random() - 0.5) * window.innerHeight * 1.5;
+
+                gsap.to(particle, {
+                    x: destinationX,
+                    y: destinationY,
+                    rotation: Math.random() * 720,
+                    opacity: 0,
+                    scale: 0,
+                    duration: 2.5 + Math.random() * 2,
+                    ease: "power2.out",
+                    onComplete: () => particle.remove()
+                });
+            }
+        }
+
+        // --- PROGRESSION ---
+        function startJourney() {
+            document.getElementById('bgMusic').play();
+            transition('screen-start', 'screen-challenge');
+            spawnWishes();
+        }
+
+        function spawnWishes() {
+            const container = document.getElementById('interaction-zone');
+            container.innerHTML = "";
+            for(let i=0; i < totalWishes; i++) createWish();
+        }
+
+        function createWish() {
+            const wish = document.createElement('div');
+            wish.className = 'floating-charm';
+            wish.innerHTML = `<svg width="55" height="55" viewBox="0 0 24 24" fill="#e0a9a5"><path d="M12 2l2.5 7.5H22l-6 5.5 2.5 7.5L12 18l-6.5 4.5 2.5-7.5-6-5.5h7.5L12 2z"/></svg>`;
+            wish.style.left = Math.random() * 70 + 15 + '%';
+            wish.style.top = Math.random() * 70 + 15 + '%';
+            document.getElementById('interaction-zone').appendChild(wish);
+
+            gsap.to(wish, {
+                x: (Math.random()-0.5)*150,
+                y: (Math.random()-0.5)*150,
+                rotation: Math.random() * 45,
+                duration: 3,
+                repeat: -1,
+                yoyo: true,
+                ease: "sine.inOut"
+            });
+
+            wish.onclick = () => {
+                progress++;
+                gsap.to(wish, { scale: 0, opacity: 0, duration: 0.3, onComplete: () => {
+                    wish.remove();
+                    if(progress >= totalWishes) {
+                        transition('screen-challenge', 'screen-scratch', initScratch);
+                    }
+                }});
+            };
+        }
+
+        function transition(fromId, toId, callback) {
+            const from = document.getElementById(fromId);
+            const to = document.getElementById(toId);
+            
+            from.style.opacity = '0';
+            setTimeout(() => {
+                from.classList.add('hidden-screen');
+                to.classList.remove('hidden-screen');
+                to.style.display = 'flex';
+                setTimeout(() => {
+                    to.style.opacity = '1';
+                    if(callback) callback();
+                }, 50);
+            }, 800);
+        }
+
+        function showVideo() {
+            const music = document.getElementById('bgMusic');
+            gsap.to(music, { volume: 0, duration: 1.5, onComplete: () => music.pause() });
+            transition('screen-scratch', 'screen-video');
+            triggerCelebration();
+            document.getElementById('finalVideo').play();
+        }
+
+        window.onload = () => { init3D(); animate(); };
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
