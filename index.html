@@ -26,7 +26,6 @@
         }
         .playfair { font-family: 'Playfair Display', serif; }
 
-        /* Metallic Text Effect */
         .metallic-text {
             background: linear-gradient(to bottom, #f9f295 0%, #e0aa3e 25%, #e0aa3e 50%, #b8860b 75%, #f9f295 100%);
             -webkit-background-clip: text;
@@ -94,7 +93,7 @@
         }
 
         .hidden-screen {
-            opacity: 0;
+            opacity: 0 !important;
             pointer-events: none;
             display: none !important;
         }
@@ -109,6 +108,12 @@
             cursor: pointer;
             filter: drop-shadow(0 0 15px var(--rose-gold));
             padding: 20px;
+        }
+
+        /* Heart Canvas Styles */
+        #heart-canvas {
+            max-width: 90vw;
+            max-height: 70vh;
         }
 
         /* Scratch Card Styles */
@@ -152,7 +157,6 @@
             50% { opacity: 0.8; }
         }
 
-        /* Video scaling for the requested 70% width */
         #final-video-container {
             width: 70vw;
             max-width: 1200px;
@@ -166,7 +170,6 @@
             z-index: 100;
         }
 
-        /* Visual enhancement: soft stars overlay */
         .stars-overlay {
             position: fixed;
             inset: 0;
@@ -212,7 +215,16 @@
         <div id="interaction-zone"></div>
     </div>
 
-    <!-- 3. SCRATCH CARD (SURPRISE) -->
+    <!-- 2.5 HEART SEQUENCE -->
+    <div id="screen-heart" class="screen hidden-screen flex-col gap-6">
+        <div class="text-center z-10">
+            <h2 class="playfair metallic-rose text-4xl tracking-[0.2em] mb-2">Pure Devotion</h2>
+            <p class="text-gray-500 text-[10px] uppercase tracking-[0.5em]">Crafting a memory just for you...</p>
+        </div>
+        <canvas id="heart-canvas"></canvas>
+    </div>
+
+    <!-- 3. SCRATCH CARD -->
     <div id="screen-scratch" class="screen hidden-screen px-6">
         <div class="text-center w-full max-w-md">
             <h2 class="playfair metallic-text text-4xl mb-8">Erase the Old</h2>
@@ -234,7 +246,6 @@
                 <canvas id="scratch-canvas"></canvas>
             </div>
             
-            <!-- Button Container -->
             <div id="action-buttons" class="flex flex-col gap-4 items-center mt-12 opacity-0 pointer-events-none transition-all duration-700">
                 <button onclick="showVideo('w.mp4')" class="btn-luxe px-10 py-4 rounded-full font-semibold uppercase text-xs tracking-widest w-64">
                     Watch the Memory
@@ -269,6 +280,29 @@
         let progress = 0;
         const totalWishes = 5;
 
+        // --- MEDIA HANDLING ---
+        function safePlay(el) {
+            if (!el) return;
+            const promise = el.play();
+            if (promise !== undefined) {
+                promise.catch(error => {
+                    console.warn("Playback was prevented or failed:", error.message);
+                });
+            }
+        }
+
+        function initMediaListeners() {
+            const music = document.getElementById('bgMusic');
+            const bgVideo = document.getElementById('bgVideo');
+            const finalVideo = document.getElementById('finalVideo');
+
+            const logError = (e) => console.log("Media resource not found or unsupported. Please ensure files exist locally.");
+            
+            if(music) music.addEventListener('error', logError, true);
+            if(bgVideo) bgVideo.addEventListener('error', logError, true);
+            if(finalVideo) finalVideo.addEventListener('error', logError, true);
+        }
+
         // --- 3D SCENE ---
         function init3D() {
             scene = new THREE.Scene();
@@ -276,7 +310,6 @@
             renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('bg-canvas'), alpha: true, antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
 
-            // Floating Central "Crystal"
             const geometry = new THREE.IcosahedronGeometry(1.6, 0);
             const material = new THREE.MeshPhongMaterial({
                 color: 0xe0a9a5,
@@ -287,7 +320,6 @@
             crystal = new THREE.Mesh(geometry, material);
             scene.add(crystal);
 
-            // Floating Fine Particles
             const pGeometry = new THREE.BufferGeometry();
             const pCount = 1800;
             const pPos = new Float32Array(pCount * 3);
@@ -297,7 +329,6 @@
             const points = new THREE.Points(pGeometry, pMat);
             scene.add(points);
 
-            // Bokeh Layer
             const bGeometry = new THREE.BufferGeometry();
             const bCount = 100;
             const bPos = new Float32Array(bCount * 3);
@@ -317,10 +348,104 @@
 
         function animate() {
             requestAnimationFrame(animate);
-            crystal.rotation.x += 0.003;
-            crystal.rotation.y += 0.004;
-            bokeh.rotation.y -= 0.002;
+            if(crystal) {
+                crystal.rotation.x += 0.003;
+                crystal.rotation.y += 0.004;
+            }
+            if(bokeh) bokeh.rotation.y -= 0.002;
             renderer.render(scene, camera);
+        }
+
+        // --- HEART DRAWING SEQUENCE ---
+        function initHeartDrawing() {
+            const canvas = document.getElementById('heart-canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = 600;
+            canvas.height = 600;
+
+            const points = [];
+            const totalPoints = 150;
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2.2;
+            const scale = 15;
+
+            for (let i = 0; i < totalPoints; i++) {
+                const t = (i / totalPoints) * Math.PI * 2;
+                const x = 16 * Math.pow(Math.sin(t), 3);
+                const y = -(13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t));
+                points.push({ x: centerX + x * scale, y: centerY + y * scale });
+            }
+
+            let currentPoint = 0;
+            function draw() {
+                if (currentPoint < points.length) {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.shadowBlur = 15;
+                    ctx.shadowColor = "#e0a9a5";
+                    ctx.beginPath();
+                    ctx.strokeStyle = "#e0a9a5";
+                    ctx.lineWidth = 3;
+                    ctx.moveTo(points[0].x, points[0].y);
+                    for (let i = 1; i <= currentPoint; i++) {
+                        ctx.lineTo(points[i].x, points[i].y);
+                    }
+                    ctx.stroke();
+                    currentPoint++;
+                    requestAnimationFrame(draw);
+                } else {
+                    gsap.to(canvas, {
+                        scale: 1.1,
+                        duration: 0.8,
+                        repeat: 3,
+                        yoyo: true,
+                        ease: "power2.inOut",
+                        onComplete: () => {
+                            explodeHeart(points, canvas);
+                        }
+                    });
+                }
+            }
+            draw();
+        }
+
+        function explodeHeart(points, canvas) {
+            const ctx = canvas.getContext('2d');
+            const particles = [];
+
+            points.forEach(p => {
+                particles.push({
+                    x: p.x,
+                    y: p.y,
+                    vx: (Math.random() - 0.5) * 15,
+                    vy: (Math.random() - 0.5) * 15,
+                    alpha: 1,
+                    size: Math.random() * 4 + 2
+                });
+            });
+
+            function burst() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                let alive = false;
+                particles.forEach(p => {
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.alpha -= 0.02;
+                    if (p.alpha > 0) {
+                        alive = true;
+                        ctx.globalAlpha = p.alpha;
+                        ctx.fillStyle = "#d4af37";
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                });
+                if (alive) {
+                    requestAnimationFrame(burst);
+                } else {
+                    transition('screen-heart', 'screen-scratch', initScratch);
+                }
+            }
+            burst();
         }
 
         // --- SCRATCH CARD ---
@@ -344,16 +469,13 @@
             function scratch(e) {
                 if(!isDrawing) return;
                 if(hint) hint.style.opacity = '0';
-
                 const rect = canvas.getBoundingClientRect();
                 const x = (e.clientX || (e.touches && e.touches[0].clientX)) - rect.left;
                 const y = (e.clientY || (e.touches && e.touches[0].clientY)) - rect.top;
-
                 ctx.globalCompositeOperation = 'destination-out';
                 ctx.beginPath();
                 ctx.arc(x, y, 38, 0, Math.PI * 2);
                 ctx.fill();
-
                 if(!buttonShown) {
                     buttonShown = true;
                     gsap.to('#action-buttons', { opacity: 1, pointerEvents: 'auto', y: -10, duration: 0.6 });
@@ -368,7 +490,7 @@
             canvas.addEventListener('touchmove', (e) => { e.preventDefault(); scratch(e); }, { passive: false });
         }
 
-        // --- CELEBRATION EFFECT ---
+        // --- CELEBRATION ---
         function triggerCelebration() {
             for (let i = 0; i < 150; i++) {
                 const particle = document.createElement('div');
@@ -381,26 +503,23 @@
                 particle.style.left = '50%';
                 particle.style.top = '50%';
                 document.body.appendChild(particle);
-
                 const destinationX = (Math.random() - 0.5) * window.innerWidth * 1.5;
                 const destinationY = (Math.random() - 0.5) * window.innerHeight * 1.5;
-
                 gsap.to(particle, {
-                    x: destinationX,
-                    y: destinationY,
-                    rotation: Math.random() * 720,
-                    opacity: 0,
-                    scale: 0,
-                    duration: 2.5 + Math.random() * 2,
-                    ease: "power2.out",
-                    onComplete: () => particle.remove()
+                    x: destinationX, y: destinationY, rotation: Math.random() * 720,
+                    opacity: 0, scale: 0, duration: 2.5 + Math.random() * 2,
+                    ease: "power2.out", onComplete: () => particle.remove()
                 });
             }
         }
 
         // --- PROGRESSION ---
         function startJourney() {
-            document.getElementById('bgMusic').play();
+            const music = document.getElementById('bgMusic');
+            if (music) {
+                music.volume = 0.4;
+                safePlay(music);
+            }
             transition('screen-start', 'screen-challenge');
             spawnWishes();
         }
@@ -418,23 +537,17 @@
             wish.style.left = Math.random() * 70 + 15 + '%';
             wish.style.top = Math.random() * 70 + 15 + '%';
             document.getElementById('interaction-zone').appendChild(wish);
-
             gsap.to(wish, {
-                x: (Math.random()-0.5)*150,
-                y: (Math.random()-0.5)*150,
-                rotation: Math.random() * 45,
-                duration: 3,
-                repeat: -1,
-                yoyo: true,
-                ease: "sine.inOut"
+                x: (Math.random()-0.5)*150, y: (Math.random()-0.5)*150,
+                rotation: Math.random() * 45, duration: 3, repeat: -1,
+                yoyo: true, ease: "sine.inOut"
             });
-
             wish.onclick = () => {
                 progress++;
                 gsap.to(wish, { scale: 0, opacity: 0, duration: 0.3, onComplete: () => {
                     wish.remove();
                     if(progress >= totalWishes) {
-                        transition('screen-challenge', 'screen-scratch', initScratch);
+                        transition('screen-challenge', 'screen-heart', initHeartDrawing);
                     }
                 }});
             };
@@ -443,7 +556,6 @@
         function transition(fromId, toId, callback) {
             const from = document.getElementById(fromId);
             const to = document.getElementById(toId);
-            
             from.style.opacity = '0';
             setTimeout(() => {
                 from.classList.add('hidden-screen');
@@ -459,34 +571,40 @@
         function showVideo(videoSrc) {
             const music = document.getElementById('bgMusic');
             const video = document.getElementById('finalVideo');
+            if(music) gsap.to(music, { volume: 0, duration: 1.5, onComplete: () => music.pause() });
             
-            gsap.to(music, { volume: 0, duration: 1.5, onComplete: () => music.pause() });
-            
-            // Set source and load
             video.src = videoSrc;
             video.load();
             
             transition('screen-scratch', 'screen-video');
             triggerCelebration();
-            video.play();
+            
+            // Wait for metadata to avoid AbortError interruption
+            video.onloadedmetadata = () => safePlay(video);
         }
 
         function backToChoice() {
             const video = document.getElementById('finalVideo');
             const music = document.getElementById('bgMusic');
-            
-            video.pause();
-            music.play();
-            gsap.to(music, { volume: 0.4, duration: 1 });
-            
+            if(video) video.pause();
+            if(music) {
+                music.play();
+                gsap.to(music, { volume: 0.4, duration: 1 });
+            }
             transition('screen-video', 'screen-scratch');
         }
 
-        window.onload = () => { init3D(); animate(); };
+        window.onload = () => { 
+            init3D(); 
+            animate(); 
+            initMediaListeners();
+        };
         window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
+            if(camera) {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+            }
+            if(renderer) renderer.setSize(window.innerWidth, window.innerHeight);
         });
     </script>
 </body>
